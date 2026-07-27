@@ -43,7 +43,6 @@ class Client{
         int parser();
         int registration(std::string line);
         void command_hub();
-        int used_nick(std::string str);
         // Client(const Client &obj);
         // ~Client();
         void link_list(std::map<std::string, int> *ptr);

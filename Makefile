@@ -2,7 +2,7 @@ CC= c++
 
 Flags= -Wall -Wextra -Werror
 
-Srcs= server.cpp client.cpp
+Srcs= main.cpp client.cpp
 
 Headers= client.hpp
 
