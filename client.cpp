@@ -1,4 +1,6 @@
 #include "client.hpp"
+#include "channel.hpp"
+
 
 Client::Client(int fd, char *ip, int port) : _fd(fd), _ip(ip), _port(port)
 {
@@ -145,6 +147,11 @@ int Client::registration(std::string line)
     return 0;
 }
 
+void Client::join_channel(Channel *chan)
+{
+    // chan->addClient();
+}
+
 void Client::command_hub()
 {
     std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
@@ -167,9 +174,18 @@ void Client::command_hub()
             send(_fd, "user not found", 14, 0);
         }
     }
+    else if (cmd == "JOIN" && args.size() >= 2)
+    {
+        // verify if channel name got #
+
+        // join_channel(Channel(args[1], ))
+        std::cout << args[1] << std::endl;
+
+    }
     cmd = "";
     args.erase(args.begin(), args.end());
 }
+
 
 void Client::link_list(std::map<std::string, int> *ptr)
 {

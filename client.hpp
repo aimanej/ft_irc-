@@ -11,11 +11,15 @@
 #include <vector>
 #include <sstream>
 #include <map>
+#include <string>
+
+class Channel;
 typedef enum {
     PASS,
     NICK,
     USER
 } e_reg;
+
 
 class Client{
     private:
@@ -30,6 +34,7 @@ class Client{
         int reg_entries;
         bool linked;
         bool added;
+        bool is_operator;
         e_reg e;
         std::map<std::string, int> *name_list;
     public:
@@ -37,6 +42,7 @@ class Client{
         Client(int fd, char *ip, int port);
         Client &operator=(const Client &obj);
 
+        void join_channel(Channel *chan);
         void add_to_buffer(std::string str);
         void print_buffer();
         bool msg_complete();
