@@ -1,8 +1,9 @@
 #include "client.hpp"
 #include "channel.hpp"
 
+class Server;
 
-Client::Client(int fd, char *ip, int port) : _fd(fd), _ip(ip), _port(port)
+Client::Client(int fd, char *ip, int port, Server *serv) : _fd(fd), _ip(ip), _port(port)
 {
     info = {{"PASS", ""}, {"NICK", ""}, {"USER", ""}};
     registered = false;
@@ -10,6 +11,7 @@ Client::Client(int fd, char *ip, int port) : _fd(fd), _ip(ip), _port(port)
     name_list = NULL;
     linked = false;
     added = false;
+    this->server = serv;
     // got_pass = false;
     // got_nick = false;
     // got_user = false;
@@ -55,7 +57,7 @@ void Client::print_buffer()
 bool Client::msg_complete()
 {
     if ((_buffer.find('\n') != std::string::npos) || (_buffer.find("\r\n") != std::string::npos))
-        return 1;
+    return 1;
     return 0;
 }
 
@@ -82,43 +84,44 @@ int Client::parser()
     int newline = _buffer.find('\n');
     std::string line = _buffer.substr(0, newline);
     _buffer.erase(0, newline + 1);
-
+    
     // std::cout << "registration value : " << registered << std::endl;
     if (!registered)
     {
         // std::cout << "going through registration" << std::endl;
         if (registration(line))
-            return 1;
+        return 1;
     }
-
+    
     if(linked)
-        std::cout << "sie of the map pointer >>>>>>>>>>>>. " << name_list->size() << std::endl;
-
+    std::cout << "sie of the map pointer >>>>>>>>>>>>. " << name_list->size() << std::endl;
+    
     std::stringstream ss(line);
     std::string command;
     ss >> command;
     if(command.size() > 3)
-        this->cmd = command;
-        
+    this->cmd = command;
+    
     while (ss)
     {
         std::string arg;
         ss >> arg;
         if (!arg.empty())
-            args.push_back(arg);
+        args.push_back(arg);
     }
     this->command_hub();
     return 0;
 }
 
+
 int Client::registration(std::string line)
 {
     std::stringstream ss(line);
     std::string key, value;
-
+    
     ss >> key;
     ss >> value;
-
+    
     std::map<std::string, std::string>::iterator it;
     it = info.find(key);
     if (it != info.end() && (it->second.size() == 0) && (value.size() >= 1) && (value.size() <= 10))
@@ -142,7 +145,7 @@ int Client::registration(std::string line)
         std::cout << " registration failed " << std::endl;
         return 1;
     }
-
+    
     int t = 0;
     return 0;
 }
@@ -159,7 +162,7 @@ void Client::command_hub()
     {
         std::cout << "inside pvt msgfunction" << std::endl;
         std::map<std::string , int>::iterator it = name_list->find(args.at(0));
-
+        
         if(it != name_list->end())
         {
             for(int t = 0; t < args.size(); t++)
@@ -174,16 +177,16 @@ void Client::command_hub()
             send(_fd, "user not found", 14, 0);
         }
     }
-    else if (cmd == "JOIN" && args.size() >= 2)
+    else if (cmd == "JOIN" && args.size() >= 1)
     {
         // verify if channel name got #
-
-        // join_channel(Channel(args[1], ))
-        std::cout << args[1] << std::endl;
-
+        
+        server->create_channel(args[0], this);
+        
     }
-    cmd = "";
-    args.erase(args.begin(), args.end());
+    
+    // cmd = "";
+    // args.erase(args.begin(), args.end());
 }
 
 
@@ -204,4 +207,9 @@ bool Client::get_added() const
 void Client::set_added()
 {
     added = true;
+}
+
+std::string Client::get_arg(int index)
+{
+    return this->args[index];
 }

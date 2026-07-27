@@ -12,6 +12,7 @@ Channel::Channel(std::string name, Client *creator)
     this->name = name;
     clients.push_back(creator);
     operators.push_back(creator);
+    std::cout << "operator " << operators[0]->get_nick() << " joined" << std::endl;
 }
 
 Channel::~Channel()

@@ -1,4 +1,4 @@
-#include "client.hpp"
+#include "server.hpp"
 
 // bool fd_exists(std::vector<Client *> clients)
 // {
@@ -7,13 +7,14 @@
 
 int main(int ac, char **av)
 {
-
+    Server serv;
     if(ac != 3)
     {
         std::cout << "no params added" << std::endl;
         exit(1);
     }
     
+    Server server;
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     int opt = 1;
@@ -55,7 +56,7 @@ int main(int ac, char **av)
                 socklen_t len = sizeof(client_addr);
                 int client_fd = accept(server_fd, (sockaddr *)&client_addr, &len);
                 std::cout << "New connection accepted:\n";
-                clients.push_back(Client(client_fd, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port)));
+                clients.push_back(Client(client_fd, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), &serv));
                 pollfd pollinho;
                 pollinho.fd = client_fd;
                 pollinho.events = POLLIN;

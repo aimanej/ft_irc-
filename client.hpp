@@ -13,7 +13,10 @@
 #include <map>
 #include <string>
 
+#include "server.hpp"
+
 class Channel;
+class Server;
 typedef enum {
     PASS,
     NICK,
@@ -23,6 +26,8 @@ typedef enum {
 
 class Client{
     private:
+        Server *server;
+
         int _fd;
         char *_ip;
         int _port;
@@ -37,9 +42,10 @@ class Client{
         bool is_operator;
         e_reg e;
         std::map<std::string, int> *name_list;
+
     public:
         Client();
-        Client(int fd, char *ip, int port);
+        Client(int fd, char *ip, int port, Server *serv);
         Client &operator=(const Client &obj);
 
         void join_channel(Channel *chan);
@@ -59,6 +65,8 @@ class Client{
         bool get_link() const;
         bool get_added() const;
         void set_added();
+        std::string get_arg(int index);
+        // friend void Server::create_channel(std::string name, Client *client);
 };
 
 

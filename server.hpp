@@ -12,12 +12,19 @@
 #include <sstream>
 #include <map>
 #include <string>
+
 #include "client.hpp"
+
+class Channel;
+class Client;
 
 class Server{
     private:
         std::string pwd;
         int port;
+        std::vector<Channel *> channels;
+    public:
+        void create_channel(std::string name, Client *client);
 };
 
 #endif
