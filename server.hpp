@@ -12,6 +12,7 @@
 #include <sstream>
 #include <map>
 #include <string>
+#include <set>
 
 #include "client.hpp"
 
@@ -24,8 +25,9 @@ class Server{
         int port;
         int socket_fd;
         std::vector<Channel *> channels;
+        std::set<std::string> open_channels;
         std::vector<pollfd> poll_vec;
-        std::vector<Client> clients;
+        std::vector<Client *> clients;
         std::map<std::string, int> name_list;
     public:
         Server(std::string, int port);
@@ -36,6 +38,11 @@ class Server{
         size_t get_poll_size();
         void run_serv();
         void new_connection();
+        int read_from_socket(int poll_index);
+        void process_completed_message(int poll_index);
+        bool free_nickname(std::string nick);
+        void send_group_msg(std::string cname, std::vector<std::string> args, Client *client);
+        void send_message(std::string sender, std::string recipient, std::vector<std::string> msgs);
 };
 
 //to be done for server::

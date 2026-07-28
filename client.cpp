@@ -77,6 +77,7 @@ std::string Client::get_nick() const
     std::map<std::string, std::string>::const_iterator it;
     it = info.find(str);
     return it->second;
+    // return info["NICK"];
 }
 
 std::string Client::remove_nl()
@@ -107,10 +108,6 @@ int Client::parser()
             return 1;
         return 0;
     }
-
-    if (linked)
-        std::cout << "sie of the map pointer >>>>>>>>>>>>. " << name_list->size() << std::endl;
-
     std::stringstream ss(line);
     std::string command;
     ss >> command;
@@ -121,11 +118,8 @@ int Client::parser()
     {
         std::string arg;
         ss >> arg;
-        int t = 0;
-        std::cout << "arg #" << t << " " << arg << std::endl;
         if (!arg.empty())
             args.push_back(arg);
-        t++;
     }
     this->command_hub();
     return 0;
@@ -143,7 +137,7 @@ int Client::registration(std::string line)
     it = info.find(key);
     if (it != info.end() && (it->second.size() == 0) && (value.size() >= 1) && (value.size() <= 10))
     {
-        if (key == "NICK" && (name_list->find(value) != name_list->end()))
+        if (key == "NICK" && (server->free_nickname(value) == false))
         {
             send(_fd, "NICK already in use, you have been disconnected!\n", 49, 0);
             return 1;
@@ -177,36 +171,18 @@ void Client::command_hub()
     // std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
     if (cmd == "PVTMSG" && args.size() >= 2)
     {
-        std::cout << "inside pvt msgfunction" << std::endl;
-        std::map<std::string, int>::iterator it = name_list->find(args.at(0));
-
-        std::cout << "looking for : " << args.at(0) << std::endl;
-        if (it != name_list->end())
-        {
-            std::cout << "sending to : " << it->first << std::endl;
-
-            for (int t = 1; t < args.size(); t++)
-            {
-
-                send(it->second, args[t].c_str(), args[t].size(), 0);
-                send(it->second, " ", 1, 0);
-            }
-            send(it->second, "\n", 1, 0);
-        }
+        if(args[0][0] == '#')
+            server->send_group_msg(args[0].substr(1, args[0].size()), args, this);
         else
-        {
-            send(_fd, "user not found", 14, 0);
-        }
-        args.erase(args.begin(), args.end());
-        cmd.erase(cmd.begin(), cmd.end());
+            server->send_message(info["NICK"], args[0], args);
     }
     else if (cmd == "JOIN" && args.size() >= 1)
     {
-        // verify if channel name got #
 
         server->create_channel(args[0], this);
     }
-
+    args.erase(args.begin(), args.end());
+    cmd.erase(cmd.begin(), cmd.end());
     // cmd = "";
     // args.erase(args.begin(), args.end());
 }

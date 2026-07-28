@@ -16,6 +16,7 @@ class Channel
 
         std::vector<Client *> clients;
         std::vector<Client *> operators;
+        std::map<std::string, int> users;
 
         std::string getMode();
 
@@ -31,15 +32,18 @@ class Channel
         std::string getName();
         int getClientCount();
         int getuserlimit(); 
+        void add_user(std::string nick, int fder);
 
         void addClient(Client *client);
         void removeClient(Client *client);
+        bool user_check(std::string nick);
+        void send_msg(std::vector<std::string> args, Client *client);
         
         
         
-        void broadcast(Client *sender, const std::string &message);
+        // void broadcast(Client *sender, const std::string &message);
 
-        void setTopic(const std::string &newTopic);
+        void setTopic(const std::string newTopic);
         void setOperator(Client *client, bool isOperator);
         void setuserlimit(int limit);
         // bool areoperator(Client *client);
