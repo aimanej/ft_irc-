@@ -17,3 +17,5 @@ clean:
 	rm -rf $(Name)
 
 fclean: clean
+
+re: clean all

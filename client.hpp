@@ -65,6 +65,7 @@ class Client{
         bool get_link() const;
         bool get_added() const;
         void set_added();
+        std::string remove_nl();
         std::string get_arg(int index);
         // friend void Server::create_channel(std::string name, Client *client);
 };

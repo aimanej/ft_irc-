@@ -57,7 +57,7 @@ void Client::print_buffer()
 bool Client::msg_complete()
 {
     if ((_buffer.find('\n') != std::string::npos) || (_buffer.find("\r\n") != std::string::npos))
-    return 1;
+        return 1;
     return 0;
 }
 
@@ -79,54 +79,71 @@ std::string Client::get_nick() const
     return it->second;
 }
 
+std::string Client::remove_nl()
+{
+    int newline;
+    std::string line;
+    if ((newline = _buffer.find("\r\n")) >= 0)
+    {
+        line = _buffer.substr(0, newline);
+        _buffer.erase(0, newline + 2);
+    }
+    else if ((newline = _buffer.find("\n")) >= 0)
+    {
+        line = _buffer.substr(0, newline);
+        _buffer.erase(0, newline + 1);
+    }
+    return line;
+}
+
 int Client::parser()
 {
-    int newline = _buffer.find('\n');
-    std::string line = _buffer.substr(0, newline);
-    _buffer.erase(0, newline + 1);
-    
+    std::string line = remove_nl();
     // std::cout << "registration value : " << registered << std::endl;
     if (!registered)
     {
         // std::cout << "going through registration" << std::endl;
         if (registration(line))
-        return 1;
+            return 1;
+        return 0;
     }
-    
-    if(linked)
-    std::cout << "sie of the map pointer >>>>>>>>>>>>. " << name_list->size() << std::endl;
-    
+
+    if (linked)
+        std::cout << "sie of the map pointer >>>>>>>>>>>>. " << name_list->size() << std::endl;
+
     std::stringstream ss(line);
     std::string command;
     ss >> command;
-    if(command.size() > 3)
-    this->cmd = command;
-    
+    if (command.size() > 3)
+        this->cmd = command;
+
     while (ss)
     {
         std::string arg;
         ss >> arg;
+        int t = 0;
+        std::cout << "arg #" << t << " " << arg << std::endl;
         if (!arg.empty())
-        args.push_back(arg);
+            args.push_back(arg);
+        t++;
     }
     this->command_hub();
     return 0;
 }
 
-
 int Client::registration(std::string line)
 {
     std::stringstream ss(line);
     std::string key, value;
-    
+
     ss >> key;
     ss >> value;
-    
+
     std::map<std::string, std::string>::iterator it;
     it = info.find(key);
     if (it != info.end() && (it->second.size() == 0) && (value.size() >= 1) && (value.size() <= 10))
     {
-        if(key == "NICK" && (name_list->find(value) != name_list->end()))
+        if (key == "NICK" && (name_list->find(value) != name_list->end()))
         {
             send(_fd, "NICK already in use, you have been disconnected!\n", 49, 0);
             return 1;
@@ -145,7 +162,7 @@ int Client::registration(std::string line)
         std::cout << " registration failed " << std::endl;
         return 1;
     }
-    
+
     int t = 0;
     return 0;
 }
@@ -157,38 +174,42 @@ void Client::join_channel(Channel *chan)
 
 void Client::command_hub()
 {
-    std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
-    if(cmd == "PVTMSG" && args.size() >= 3)
+    // std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
+    if (cmd == "PVTMSG" && args.size() >= 2)
     {
         std::cout << "inside pvt msgfunction" << std::endl;
-        std::map<std::string , int>::iterator it = name_list->find(args.at(0));
-        
-        if(it != name_list->end())
+        std::map<std::string, int>::iterator it = name_list->find(args.at(0));
+
+        std::cout << "looking for : " << args.at(0) << std::endl;
+        if (it != name_list->end())
         {
-            for(int t = 0; t < args.size(); t++)
+            std::cout << "sending to : " << it->first << std::endl;
+
+            for (int t = 1; t < args.size(); t++)
             {
-                
+
                 send(it->second, args[t].c_str(), args[t].size(), 0);
-                send(it->second, " " , 1, 0);
+                send(it->second, " ", 1, 0);
             }
+            send(it->second, "\n", 1, 0);
         }
         else
         {
             send(_fd, "user not found", 14, 0);
         }
+        args.erase(args.begin(), args.end());
+        cmd.erase(cmd.begin(), cmd.end());
     }
     else if (cmd == "JOIN" && args.size() >= 1)
     {
         // verify if channel name got #
-        
+
         server->create_channel(args[0], this);
-        
     }
-    
+
     // cmd = "";
     // args.erase(args.begin(), args.end());
 }
-
 
 void Client::link_list(std::map<std::string, int> *ptr)
 {
