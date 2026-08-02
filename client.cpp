@@ -11,6 +11,7 @@ Client::Client(int fd, char *ip, int port, Server *serv) : _fd(fd), _ip(ip), _po
     name_list = NULL;
     linked = false;
     added = false;
+    op = false;
     this->server = serv;
     // got_pass = false;
     // got_nick = false;
@@ -25,6 +26,7 @@ Client::Client() : _fd(0), _ip(0), _port(0)
     name_list = NULL;
     linked = false;
     added = false;
+    op = false;
     // got_pass = false;
     // got_nick = false;
     // got_user = false;
@@ -181,6 +183,22 @@ void Client::command_hub()
 
         server->create_channel(args[0], this);
     }
+    else if (cmd == "MODE")
+    {
+        this->server->set_mode(this, args);
+    }
+    else if (cmd == "TOPIC" && args.size() >= 1)
+    {
+        server->send_topic(args[0], args, this);
+    }
+    else if (cmd == "KICK" && args.size() >= 2)
+    {
+        server->kick_user(args[0], args[1], this);
+    }
+    else
+    {
+        send(_fd, "command not recognized\n", 23, 0);
+    }
     args.erase(args.begin(), args.end());
     cmd.erase(cmd.begin(), cmd.end());
     // cmd = "";
@@ -206,7 +224,17 @@ void Client::set_added()
     added = true;
 }
 
+void Client::set_operator(bool is_op)
+{
+    op = is_op;
+}
+
 std::string Client::get_arg(int index)
 {
     return this->args[index];
+}
+
+bool Client::is_operator()
+{
+    return op;
 }

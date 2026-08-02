@@ -7,7 +7,7 @@ Server::Server(std::string pass, int port) : pwd(pass), port(port)
 
     int opt = 1;
     setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
+    
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(6667);
@@ -186,9 +186,14 @@ void Server::create_channel(std::string name, Client *client)
         {
             if (channels[t]->getName() == cname && !(channels[t]->user_check(client->get_nick())))
             {
-                channels[t]->addClient(client);
-                channels[t]->add_user(client->get_nick(), client->get_fd());
-                send(client->get_fd(), "channel joined\n", 15, 0);
+                if (channels[t]->getuserlimit() == 0 || channels[t]->getClientCount() < channels[t]->getuserlimit())
+                {
+                    channels[t]->addClient(client);
+                    channels[t]->add_user(client->get_nick(), client->get_fd());
+                    send(client->get_fd(), "channel joined\n", 15, 0);
+                }
+                else 
+                    send(client->get_fd(), "channel is full, cannot join\n", 30, 0);
             }
             else if (channels[t]->getName() == cname && (channels[t]->user_check(client->get_nick())))
                 send(client->get_fd(), "you are already part of this channel\n", 37, 0);
@@ -204,6 +209,151 @@ void Server::send_group_msg(std::string cname, std::vector<std::string> args, Cl
         if(channels[t]->getName() == cname)
         {
             channels[t]->send_msg(args, client);
+        }
+    }
+}
+
+void Server::set_mode(Client *client, std::vector<std::string> args)
+{
+    std::string cname;
+    if (args.size() >= 1 && args[0][0] == '#')
+        cname = args[0].substr(1, args[0].size());
+    else
+    {
+        send(client->get_fd(), "use # before the name of a channel you would like to join\n", 58, 0);
+        return;
+    }
+    for(int t = 0; t < channels.size(); t++)
+    {
+        if(channels[t]->getName() == cname)
+        {
+            if (args.size() < 2)
+            {
+                send(client->get_fd(), "no mode specified\n", 18, 0);
+                return;
+            }
+            if (channels[t]->operator_check(client->get_nick()))
+            {
+                Client *target = NULL;
+                if (args[1] == "+o" || args[1] == "-o")
+                {
+                    if (args.size() >= 3)
+                    {
+                        for (int i = 0; i < clients.size(); i++)
+                        {
+                            if (clients[i]->get_nick() == args[2])
+                            {
+                                target = clients[i];
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        send(client->get_fd(), "no target specified for operator mode change\n", 46, 0);
+                        return;
+                    }
+                }
+                if(args[1] == "+i")
+                    channels[t]->setInviteOnly(true);
+                else if(args[1] == "-i")
+                    channels[t]->setInviteOnly(false);
+                else if(args[1] == "+t")
+                    channels[t]->setTopcrestricted(true);
+                else if(args[1] == "-t")
+                    channels[t]->setTopcrestricted(false);
+                else if(args[1] == "+k" && args.size() >= 3)
+                    channels[t]->setPassword(args[2]);
+                else if(args[1] == "-k")
+                    channels[t]->setPassword("");
+                else if(args[1] == "+l" && args.size() >= 3)
+                    channels[t]->setuserlimit(std::stoi(args[2]));
+                else if(args[1] == "-l")
+                    channels[t]->setuserlimit(0);
+                else if(args[1] == "+o" && target != NULL)
+                    channels[t]->setOperator(target, true);
+                else if(args[1] == "-o" && target != NULL)
+                    channels[t]->setOperator(target, false);
+                else if ((args[1] == "+o" || args[1] == "-o") && target == NULL)
+                    send(client->get_fd(), "target user not found\n", 22, 0);
+            }
+            else
+                send(client->get_fd(), "you are not an operator of this channel\n", 39, 0);
+        }
+    }
+}
+
+void Server::send_topic(std::string cname, std::vector<std::string> args, Client *client)
+{
+    (void)cname;
+
+    if (args[0][0] != '#')
+    {
+        send(client->get_fd(), "use # before the name of a channel you would like to join\n", 58, 0);
+        return;
+    }
+    args[0] = args[0].substr(1, args[0].size());
+    bool found = false;
+    for(int t = 0; t < channels.size(); t++)
+    {
+        if(channels[t]->getName() == args[0])
+        {
+            found = true;
+            if(args.size() >= 2)
+            {
+                std::string ntopic;
+                for (int i = 1; i < args.size(); i++)
+                {
+                    if (!ntopic.empty())
+                        ntopic += " ";
+                    ntopic += args[i];
+                }
+                if (channels[t]->getTopcrestricted() && !(channels[t]->operator_check(client->get_nick())))
+                {
+                    send(client->get_fd(), "you are not an operator of this channel\n", 39, 0);
+                    return;
+                }
+                channels[t]->setTopic(ntopic);
+                send(client->get_fd(), channels[t]->getTopic().c_str(), channels[t]->getTopic().size(), 0);
+            }
+            else
+                send(client->get_fd(), channels[t]->getTopic().c_str(), channels[t]->getTopic().size(), 0);
+            send(client->get_fd(), "\n", 1, 0);
+        }
+    }
+    if (!found)
+        send(client->get_fd(), "no such channel\n", 17, 0);
+    
+}
+
+
+
+
+void Server::kick_user(std::string cname, std::string nick, Client *client)
+{
+    if (cname[0] != '#')
+    {
+        send(client->get_fd(), "use # before the name of a channel you would like to join\n", 58, 0);
+        return;
+    }
+    cname = cname.substr(1, cname.size());
+    for(int t = 0; t < channels.size(); t++)
+    {
+        if(channels[t]->getName() == cname)
+        {
+            if(channels[t]->user_check(nick))
+            {
+                if (channels[t]->operator_check(client->get_nick()))
+                {
+                    channels[t]->removeClient(nick);
+                    send(client->get_fd(), "user kicked from channel\n", 26, 0);
+                    send(name_list[nick], "you have been kicked from channel\n", 34, 0);
+                }
+                else
+                    send(client->get_fd(), "you are not an operator of this channel\n", 39, 0);
+            }
+            else
+                send(client->get_fd(), "user not found in channel\n", 28, 0);
         }
     }
 }

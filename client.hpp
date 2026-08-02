@@ -39,7 +39,7 @@ class Client{
         int reg_entries;
         bool linked;
         bool added;
-        bool is_operator;
+        bool op;
         e_reg e;
         std::map<std::string, int> *name_list;
 
@@ -65,8 +65,10 @@ class Client{
         bool get_link() const;
         bool get_added() const;
         void set_added();
+        void set_operator(bool is_op);
         std::string remove_nl();
         std::string get_arg(int index);
+        bool is_operator();
         // friend void Server::create_channel(std::string name, Client *client);
 };
 

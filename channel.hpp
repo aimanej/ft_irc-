@@ -21,6 +21,9 @@ class Channel
         std::string getMode();
 
         // bool isOperator;
+        bool inviteOnly;
+        bool topcrestricted;
+         
         
     public:
         Channel(const Channel &other);
@@ -30,15 +33,20 @@ class Channel
         std::string getTopic();
         std::string getPassword();
         std::string getName();
-        int getClientCount();
-        int getuserlimit(); 
-        void add_user(std::string nick, int fder);
+        int         getClientCount();
+        int         getuserlimit(); 
+        bool getInviteOnly();
+        bool getTopcrestricted();
 
-        void addClient(Client *client);
-        void removeClient(Client *client);
-        bool user_check(std::string nick);
-        void send_msg(std::vector<std::string> args, Client *client);
+
+        void add_user(std::string nick, int fder);
+        int addClient(Client *client);
         
+        bool operator_check(std::string nick);
+        bool user_check(std::string nick);
+        
+        void send_msg(std::vector<std::string> args, Client *client);
+        void removeClient(const std::string &nick);
         
         
         // void broadcast(Client *sender, const std::string &message);
@@ -46,6 +54,9 @@ class Channel
         void setTopic(const std::string newTopic);
         void setOperator(Client *client, bool isOperator);
         void setuserlimit(int limit);
+        void setPassword(const std::string newPassword);
+        void setInviteOnly(bool inviteOnly);
+        void setTopcrestricted(bool topcrestricted); 
         // bool areoperator(Client *client);
 };
 

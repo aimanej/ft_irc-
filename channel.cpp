@@ -9,7 +9,12 @@ Channel::Channel(const Channel &other)
 
 Channel::Channel(std::string name, Client *creator)
 {
+    userlimit = 0;
+    inviteOnly = false;
+    topcrestricted = false;
+    password = "";
     this->name = name;
+    creator->set_operator(true);
     clients.push_back(creator);
     operators.push_back(creator);
     users.insert({creator->get_nick(), creator->get_fd()});
@@ -47,25 +52,44 @@ int Channel::getuserlimit()
     return userlimit;
 }
 
-void Channel::addClient(Client *client)
+bool Channel::getInviteOnly()
 {
-    if (userlimit > 0 && clients.size() >= userlimit)
-    {
-        std::cout << "Cannot add client: user limit reached." << std::endl;
-        return;
-    }
-    if (clients.empty())
-    {
-        clients.push_back(client);
-        operators.push_back(client);
-        return;
-    }
-    clients.push_back(client);
+    return inviteOnly;
 }
 
-void Channel::removeClient(Client *client)
+bool Channel::getTopcrestricted()
 {
-    //
+    return topcrestricted;
+}
+
+int Channel::addClient(Client *client)
+{
+    clients.push_back(client);
+    return 1;
+}
+
+void Channel::removeClient(const std::string &nick)
+{
+    for (int i = 0; i < clients.size(); ++i)
+    {
+        if (clients[i]->get_nick() == nick)
+        {
+            clients.erase(clients.begin() + i);
+            users.erase(nick);
+
+            for (int j = 0; j < operators.size(); ++j)
+            {
+                if (operators[j]->get_nick() == nick)
+                {
+                    operators[j]->set_operator(false);
+                    operators.erase(operators.begin() + j);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
 }
 
 
@@ -95,6 +119,14 @@ void Channel::setOperator(Client *client, bool isOperator)
     else
     {
         // Remove client from operators vector
+        for (int i = 0; i < operators.size(); ++i)
+        {
+            if (operators[i] == client)
+            {
+                operators.erase(operators.begin() + i);
+                break;
+            }
+        }
     }
 }
 
@@ -110,7 +142,22 @@ void Channel::add_user(std::string name, int fder)
 
 bool Channel::user_check(std::string nick)
 {
-    return (users.find(nick) == users.end()) ? false : true;
+    for ( int t = 0; t < clients.size(); t++)
+    {
+        if(clients[t]->get_nick() == nick)
+            return true;
+    }
+    return false;
+}
+
+bool Channel::operator_check(std::string nick)
+{
+    for (int t = 0; t < operators.size(); t++)
+    {
+        if (operators[t]->get_nick() == nick)
+            return true;
+    }
+    return false;
 }
 
 void Channel::send_msg( std::vector<std::string> args, Client *client)
@@ -129,3 +176,17 @@ void Channel::send_msg( std::vector<std::string> args, Client *client)
         }
     }
 }
+
+void Channel::setPassword(const std::string newPassword)
+{
+    password = newPassword;
+}
+
+void Channel::setInviteOnly(bool inviteOnly)
+{
+    this->inviteOnly = inviteOnly;
+}
+void Channel::setTopcrestricted(bool topcrestricted)
+{
+    this->topcrestricted = topcrestricted;
+}   

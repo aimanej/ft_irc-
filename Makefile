@@ -19,3 +19,4 @@ clean:
 fclean: clean
 
 re: clean all
+	./server a 6667
