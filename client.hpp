@@ -34,6 +34,7 @@ class Client{
         std::string cmd;
         std::vector<std::string> args;
         std::map<std::string, std::string> info;
+        std::string inv_cname;
         std::string _buffer;
         bool registered;
         int reg_entries;
@@ -69,6 +70,8 @@ class Client{
         std::string remove_nl();
         std::string get_arg(int index);
         bool is_operator();
+        void set_inv_cname(std::string cname);
+        std::string get_inv_cname() ;
         // friend void Server::create_channel(std::string name, Client *client);
 };
 

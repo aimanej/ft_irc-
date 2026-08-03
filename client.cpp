@@ -13,6 +13,7 @@ Client::Client(int fd, char *ip, int port, Server *serv) : _fd(fd), _ip(ip), _po
     added = false;
     op = false;
     this->server = serv;
+    inv_cname = "";
     // got_pass = false;
     // got_nick = false;
     // got_user = false;
@@ -27,6 +28,7 @@ Client::Client() : _fd(0), _ip(0), _port(0)
     linked = false;
     added = false;
     op = false;
+    inv_cname = "";
     // got_pass = false;
     // got_nick = false;
     // got_user = false;
@@ -195,6 +197,23 @@ void Client::command_hub()
     {
         server->kick_user(args[0], args[1], this);
     }
+    else if (cmd == "QUIT")
+    {
+        send(_fd, "you have been disconnected\n", 27, 0);
+        close(_fd);
+    }
+    else if (cmd == "INVITE" && args.size() >= 2)
+    {
+        server->invite_user(args[1], args[0], this);
+    }
+    else if (cmd == "LEAVE" && args.size() >= 1)
+    {
+        server->leave_channel(args[0], this);
+    }
+    else if (cmd == "LIST")
+    {
+        // server->list_channels(this);
+    }
     else
     {
         send(_fd, "command not recognized\n", 23, 0);
@@ -237,4 +256,14 @@ std::string Client::get_arg(int index)
 bool Client::is_operator()
 {
     return op;
+}
+
+void Client::set_inv_cname(std::string cname)
+{
+    inv_cname = cname;
+}
+
+std::string Client::get_inv_cname()
+{
+    return inv_cname;
 }

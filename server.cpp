@@ -188,9 +188,16 @@ void Server::create_channel(std::string name, Client *client)
             {
                 if (channels[t]->getuserlimit() == 0 || channels[t]->getClientCount() < channels[t]->getuserlimit())
                 {
+                    if (channels[t]->getInviteOnly() && client->get_inv_cname() != cname)
+                    {
+                        send(client->get_fd(), "channel is invite only, cannot join\n", 36, 0);
+                        return;
+                    }
                     channels[t]->addClient(client);
                     channels[t]->add_user(client->get_nick(), client->get_fd());
-                    send(client->get_fd(), "channel joined\n", 15, 0);
+                    send(client->get_fd(), "Joined channel #", 15, 0);
+                    send(client->get_fd(), cname.c_str(), cname.size(), 0);
+                    send(client->get_fd(), "\n", 1, 0);
                 }
                 else 
                     send(client->get_fd(), "channel is full, cannot join\n", 30, 0);
@@ -223,10 +230,13 @@ void Server::set_mode(Client *client, std::vector<std::string> args)
         send(client->get_fd(), "use # before the name of a channel you would like to join\n", 58, 0);
         return;
     }
+
+    bool found = false;
     for(int t = 0; t < channels.size(); t++)
     {
         if(channels[t]->getName() == cname)
         {
+            found = true;
             if (args.size() < 2)
             {
                 send(client->get_fd(), "no mode specified\n", 18, 0);
@@ -279,8 +289,12 @@ void Server::set_mode(Client *client, std::vector<std::string> args)
             }
             else
                 send(client->get_fd(), "you are not an operator of this channel\n", 39, 0);
+            return;
         }
     }
+
+    if (!found)
+        send(client->get_fd(), "no such channel\n", 17, 0);
 }
 
 void Server::send_topic(std::string cname, std::vector<std::string> args, Client *client)
@@ -337,10 +351,13 @@ void Server::kick_user(std::string cname, std::string nick, Client *client)
         return;
     }
     cname = cname.substr(1, cname.size());
+
+    bool found = false;
     for(int t = 0; t < channels.size(); t++)
     {
         if(channels[t]->getName() == cname)
         {
+            found = true;
             if(channels[t]->user_check(nick))
             {
                 if (channels[t]->operator_check(client->get_nick()))
@@ -354,6 +371,60 @@ void Server::kick_user(std::string cname, std::string nick, Client *client)
             }
             else
                 send(client->get_fd(), "user not found in channel\n", 28, 0);
+            return;
         }
     }
+
+    if (!found)
+        send(client->get_fd(), "no such channel\n", 17, 0);
+}
+
+void Server::invite_user(std::string cname, std::string nick, Client *client)
+{
+    if (cname[0] != '#')
+    {
+        send(client->get_fd(), "use # before the name of a channel you would like to join\n", 58, 0);
+        return;
+    }
+    cname = cname.substr(1, cname.size());
+
+    bool found = false;
+    for(int t = 0; t < channels.size(); t++)
+    {
+        if(channels[t]->getName() == cname)
+        {
+            found = true;
+            if(channels[t]->user_check(nick))
+            {
+                send(client->get_fd(), "user already in channel\n", 25, 0);
+                return;
+            }
+            if (name_list.find(nick) == name_list.end())
+            {
+                send(client->get_fd(), "user not found\n", 15, 0);
+                return;
+            }
+            if (channels[t]->operator_check(client->get_nick()))
+            {
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    if (clients[i]->get_nick() == nick)
+                    {
+                        clients[i]->set_inv_cname(cname);
+                        break;
+                    }
+                }
+                send(name_list[nick], "you have been invited to channel\n", 33, 0);
+                send(name_list[nick], cname.c_str(), cname.size(), 0);
+                send(name_list[nick], "\n", 1, 0);
+                send(client->get_fd(), "user invited to channel\n", 25, 0);
+            }
+            else
+                send(client->get_fd(), "you are not an operator of this channel\n", 39, 0);
+            return;
+        }
+    }
+
+    if (!found)
+        send(client->get_fd(), "no such channel\n", 17, 0);
 }

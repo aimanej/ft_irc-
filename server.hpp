@@ -46,6 +46,8 @@ class Server{
         void set_mode(Client *client, std::vector<std::string> args);
         void send_topic(std::string cname, std::vector<std::string> args, Client *client);
         void kick_user(std::string cname, std::string nick, Client *client);
+        void invite_user(std::string cname, std::string nick, Client *client);
+        void leave_channel(std::string cname, Client *client);
 };
 
 //to be done for server::
