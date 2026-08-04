@@ -208,7 +208,7 @@ void Client::command_hub()
     }
     else if (cmd == "LEAVE" && args.size() >= 1)
     {
-        server->leave_channel(args[0], this);
+        //server->leave_channel(args[0], this);
     }
     else if (cmd == "LIST")
     {

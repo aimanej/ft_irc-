@@ -10,7 +10,7 @@ Server::Server(std::string pass, int port) : pwd(pass), port(port)
     
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(6667);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
     bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr));
