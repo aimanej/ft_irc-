@@ -10,7 +10,7 @@ Server::Server(std::string pass, int port) : pwd(pass), port(port)
     
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(6667);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
 
     bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr));
@@ -33,6 +33,11 @@ pollfd *Server::get_poll_data()
 size_t Server::get_poll_size()
 {
     return poll_vec.size();
+}
+
+std::string Server::get_pwd() const
+{
+    return pwd;
 }
 
 int Server::get_sfd() const
@@ -144,17 +149,23 @@ void Server::send_message(std::string sender, std::string recipient, std::vector
         std::cout << "sending to : " << it->first << std::endl;
         send(it->second, sender.c_str(), sender.size(), 0);
         send(it->second, ": ", 2, 0);
+        // std::cout << "erased resulted into : " << msgs[0] << std::endl;
+        if(msgs[1][0] == ':')
+        {
+            msgs[1].erase(msgs[1].begin());
+        }
         for (int t = 1; t < msgs.size(); t++)
         {
 
             send(it->second, msgs[t].c_str(), msgs[t].size(), 0);
             send(it->second, " ", 1, 0);
         }
-        send(it->second, "\n", 1, 0);
+        send(it->second, "\r\n", 2, 0);
     }
     else
     {
-        send(name_list[sender], "user not found", 14, 0);
+        std::string msg = ":irc_server 401 " + sender + recipient + ":No such nick/channel\r\n";
+        send(name_list[sender], msg.c_str(), msg.size(), 0);
     }
 }
 
@@ -216,8 +227,10 @@ void Server::send_group_msg(std::string cname, std::vector<std::string> args, Cl
         if(channels[t]->getName() == cname)
         {
             channels[t]->send_msg(args, client);
+            return;
         }
     }
+    
 }
 
 void Server::set_mode(Client *client, std::vector<std::string> args)

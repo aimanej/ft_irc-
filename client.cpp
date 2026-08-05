@@ -14,9 +14,7 @@ Client::Client(int fd, char *ip, int port, Server *serv) : _fd(fd), _ip(ip), _po
     op = false;
     this->server = serv;
     inv_cname = "";
-    // got_pass = false;
-    // got_nick = false;
-    // got_user = false;
+
 }
 
 Client::Client() : _fd(0), _ip(0), _port(0)
@@ -29,9 +27,6 @@ Client::Client() : _fd(0), _ip(0), _port(0)
     added = false;
     op = false;
     inv_cname = "";
-    // got_pass = false;
-    // got_nick = false;
-    // got_user = false;
 }
 
 Client &Client::operator=(const Client &obj)
@@ -104,10 +99,8 @@ std::string Client::remove_nl()
 int Client::parser()
 {
     std::string line = remove_nl();
-    // std::cout << "registration value : " << registered << std::endl;
     if (!registered)
     {
-        // std::cout << "going through registration" << std::endl;
         if (registration(line))
             return 1;
         return 0;
@@ -137,21 +130,34 @@ int Client::registration(std::string line)
     ss >> key;
     ss >> value;
 
+    if(key == "CAP")
+        return 0;
     std::map<std::string, std::string>::iterator it;
     it = info.find(key);
     if (it != info.end() && (it->second.size() == 0) && (value.size() >= 1) && (value.size() <= 10))
     {
-        if (key == "NICK" && (server->free_nickname(value) == false))
+        if ((key == "NICK" && (server->free_nickname(value) == false)) || key == "NICK" && value[0] == '#')
         {
-            send(_fd, "NICK already in use, you have been disconnected!\n", 49, 0);
+            send(_fd, "nickname format not accepted or already in use\n", 47, 0);
+            return 1;
+        }
+        else if(key == "PASS" && value != server->get_pwd())
+        {
+            send(_fd, "464", 3, 0);
             return 1;
         }
         info[key] = value;
         reg_entries++;
         if (reg_entries == 3)
         {
+            std::string msg = ":irc_server 001 " + this->info["NICK"] + " :Welcome to the IRC server Network\r\n";
+
+            // std::string msg = "welcome to the irc server: 001 " + this->info["NICK"] + "\r\n";
             registered = true;
-            send(_fd, "you are now registered !\n", 25, 0);
+            // send(_fd, "irc_server: ", 12, 0);
+            send(_fd, msg.c_str(), msg.size(), 0);
+            // send(_fd, this->info["NICK"].c_str(), this->info["NICK"].size(), 0);
+            // send(_fd, " :Welcome to the IRC server Network\r\n", 36, 0);
         }
         return 0;
     }
@@ -173,7 +179,7 @@ void Client::join_channel(Channel *chan)
 void Client::command_hub()
 {
     // std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
-    if (cmd == "PVTMSG" && args.size() >= 2)
+    if (cmd == "PRIVMSG" && args.size() >= 2)
     {
         if(args[0][0] == '#')
             server->send_group_msg(args[0].substr(1, args[0].size()), args, this);
@@ -208,11 +214,15 @@ void Client::command_hub()
     }
     else if (cmd == "LEAVE" && args.size() >= 1)
     {
-        // server->leave_channel(args[0], this);
+        //server->leave_channel(args[0], this);
     }
     else if (cmd == "LIST")
     {
         // server->list_channels(this);
+    }
+    else if(cmd == "PING")
+    {
+        send(_fd, "PONG irc_server\r\n", 17, 0);
     }
     else
     {

@@ -41,6 +41,7 @@ class Server{
         int read_from_socket(int poll_index);
         void process_completed_message(int poll_index);
         bool free_nickname(std::string nick);
+        std::string get_pwd() const;
         void send_group_msg(std::string cname, std::vector<std::string> args, Client *client);
         void send_message(std::string sender, std::string recipient, std::vector<std::string> msgs);
         void set_mode(Client *client, std::vector<std::string> args);

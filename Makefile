@@ -1,6 +1,6 @@
 CC= c++
 
-Flags= -Wall -Wextra -Werror
+Flags= -std=c++98 -Wall -Wextra -Werror
 
 Srcs= main.cpp client.cpp channel.cpp server.cpp
 
@@ -19,4 +19,3 @@ clean:
 fclean: clean
 
 re: clean all
-	./server a 6667
