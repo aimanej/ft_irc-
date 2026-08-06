@@ -41,8 +41,9 @@ class Client{
         bool linked;
         bool added;
         bool op;
+        bool quit_request;
+        bool failed_registration;
         e_reg e;
-        std::map<std::string, int> *name_list;
 
     public:
         Client();
@@ -54,17 +55,17 @@ class Client{
         void print_buffer();
         bool msg_complete();
         int parser();
-        int registration(std::string line);
+        int registration();
         void command_hub();
         // Client(const Client &obj);
         // ~Client();
-        void link_list(std::map<std::string, int> *ptr);
         //getters
         int get_fd() const;
         bool get_reg_status() const;
         std::string get_nick() const;
         bool get_link() const;
         bool get_added() const;
+        bool get_failed_reg() const;
         void set_added();
         void set_operator(bool is_op);
         std::string remove_nl();
@@ -72,6 +73,8 @@ class Client{
         bool is_operator();
         void set_inv_cname(std::string cname);
         std::string get_inv_cname() ;
+        bool get_quit_req() const;
+        void set_nick(std::string new_nick);
         // friend void Server::create_channel(std::string name, Client *client);
 };
 

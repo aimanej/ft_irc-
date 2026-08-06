@@ -49,6 +49,8 @@ class Server{
         void kick_user(std::string cname, std::string nick, Client *client);
         void invite_user(std::string cname, std::string nick, Client *client);
         void leave_channel(std::string cname, Client *client);
+        void remove_client(int t);
+        void update_nick(Client *client, std::string new_ick);
 };
 
 //to be done for server::

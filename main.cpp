@@ -37,7 +37,7 @@ int main(int ac, char **av)
     if(!isValidPort(av[1]))
     {
         std::cout << "unvalid port number" << std::endl;
-        exit(1);
+        exit(1); 
     }
 
     Server serv(av[2], atoi(av[1]));

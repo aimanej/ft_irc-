@@ -8,13 +8,13 @@ Client::Client(int fd, char *ip, int port, Server *serv) : _fd(fd), _ip(ip), _po
     info = {{"PASS", ""}, {"NICK", ""}, {"USER", ""}};
     registered = false;
     reg_entries = 0;
-    name_list = NULL;
     linked = false;
     added = false;
     op = false;
+    quit_request = false;
+    failed_registration = false;
     this->server = serv;
     inv_cname = "";
-
 }
 
 Client::Client() : _fd(0), _ip(0), _port(0)
@@ -22,10 +22,12 @@ Client::Client() : _fd(0), _ip(0), _port(0)
     info = {{"PASS", ""}, {"NICK", ""}, {"USER", ""}};
     registered = false;
     reg_entries = 0;
-    name_list = NULL;
     linked = false;
+    failed_registration = false;
     added = false;
     op = false;
+    quit_request = false;
+
     inv_cname = "";
 }
 
@@ -39,6 +41,8 @@ Client &Client::operator=(const Client &obj)
         info = obj.info;
         reg_entries = obj.reg_entries;
         linked = obj.linked;
+        quit_request = obj.quit_request;
+        failed_registration = obj.failed_registration;
     }
     return *this;
 }
@@ -99,76 +103,90 @@ std::string Client::remove_nl()
 int Client::parser()
 {
     std::string line = remove_nl();
-    if (!registered)
-    {
-        if (registration(line))
-            return 1;
-        return 0;
-    }
+
     std::stringstream ss(line);
     std::string command;
     ss >> command;
     if (command.size() > 3)
         this->cmd = command;
 
+    int t = 0;
     while (ss)
     {
         std::string arg;
         ss >> arg;
+        if (t == 1 && !arg.empty() && arg[0] == ':')
+        {
+            arg.erase(arg.begin());
+        }
+
         if (!arg.empty())
             args.push_back(arg);
+        t++;
     }
     this->command_hub();
     return 0;
 }
 
-int Client::registration(std::string line)
+int Client::registration()
 {
+    if (registered)
+        return 0;
+
+    std::string line = remove_nl();
     std::stringstream ss(line);
     std::string key, value;
 
     ss >> key;
     ss >> value;
 
-    if(key == "CAP")
+    if (key == "CAP")
         return 0;
     std::map<std::string, std::string>::iterator it;
     it = info.find(key);
     if (it != info.end() && (it->second.size() == 0) && (value.size() >= 1) && (value.size() <= 10))
     {
-        if ((key == "NICK" && (server->free_nickname(value) == false)) || key == "NICK" && value[0] == '#')
+        if (key == "NICK")
         {
-            send(_fd, "nickname format not accepted or already in use\n", 47, 0);
-            return 1;
+            if (server->free_nickname(value) == false)
+            {
+                std::string msg = ":irc_server 433 * " + info["NICK"] + " :Nickname is already in use\r\n";
+                send(_fd, msg.c_str(), msg.size(), 0);
+                failed_registration = true;
+                return 1;
+            }
+            else if (key == "NICK" && value[0] == '#')
+            {
+                std::string msg = ":irc_server 432 * " + info["NICK"] + " :Erroneous nickname\r\n";
+                send(_fd, msg.c_str(), msg.size(), 0);
+                failed_registration = true;
+                return 1;
+            }
         }
-        else if(key == "PASS" && value != server->get_pwd())
+
+        else if (key == "PASS" && value != server->get_pwd())
         {
             send(_fd, "464", 3, 0);
+            failed_registration = true;
             return 1;
         }
         info[key] = value;
         reg_entries++;
         if (reg_entries == 3)
         {
-            std::string msg = ":irc_server 001 " + this->info["NICK"] + " :Welcome to the IRC server Network\r\n";
-
-            // std::string msg = "welcome to the irc server: 001 " + this->info["NICK"] + "\r\n";
             registered = true;
-            // send(_fd, "irc_server: ", 12, 0);
-            send(_fd, msg.c_str(), msg.size(), 0);
-            // send(_fd, this->info["NICK"].c_str(), this->info["NICK"].size(), 0);
-            // send(_fd, " :Welcome to the IRC server Network\r\n", 36, 0);
         }
         return 0;
     }
     else
     {
         std::cout << " registration failed " << std::endl;
+        failed_registration = true;
         return 1;
     }
 
-    int t = 0;
-    return 0;
+    // int t = 0;
+    // return 0;
 }
 
 void Client::join_channel(Channel *chan)
@@ -176,12 +194,22 @@ void Client::join_channel(Channel *chan)
     // chan->addClient();
 }
 
+bool Client::get_quit_req() const
+{
+    return quit_request;
+}
+
+bool Client::get_failed_reg() const
+{
+    return failed_registration;
+}
+
 void Client::command_hub()
 {
-    // std::cout << "hit the hub >> WITH CMD ::  " << cmd << std::endl;
-    if (cmd == "PRIVMSG" && args.size() >= 2)
+    std::cout << "hit the hub >> WITH CMD ::  [" << cmd << "]" << std::endl;
+    if (cmd == "PRIVMSG")
     {
-        if(args[0][0] == '#')
+        if (args.size() >= 1 && args[0][0] == '#')
             server->send_group_msg(args[0].substr(1, args[0].size()), args, this);
         else
             server->send_message(info["NICK"], args[0], args);
@@ -205,8 +233,11 @@ void Client::command_hub()
     }
     else if (cmd == "QUIT")
     {
-        send(_fd, "you have been disconnected\n", 27, 0);
-        close(_fd);
+        std::cout << "INSIDE QUIT FUNCTION " << std::endl;
+        quit_request = true;
+        std::string reason = (!args.empty()) ? args[0] : "Client Quit";
+        std::string msg = "ERROR :Closing Link: " + info["NICK"] + " (Quit: " + reason + ")\r\n";
+        send(_fd, msg.c_str(), msg.size(), 0);
     }
     else if (cmd == "INVITE" && args.size() >= 2)
     {
@@ -214,29 +245,44 @@ void Client::command_hub()
     }
     else if (cmd == "LEAVE" && args.size() >= 1)
     {
-        //server->leave_channel(args[0], this);
+        // server->leave_channel(args[0], this);
     }
     else if (cmd == "LIST")
     {
         // server->list_channels(this);
     }
-    else if(cmd == "PING")
+    else if (cmd == "NICK")
     {
-        send(_fd, "PONG irc_server\r\n", 17, 0);
+        if (args.empty())
+        {
+            std::string msg = ":irc_server 431 " + info["NICK"] + " :No nickname given\r\n";
+            send(_fd, msg.c_str(), msg.size(), 0);
+        }
+        else if (!args.empty() && args[0][0] == '#')
+        {
+            std::string msg = ":irc_server 432 " + info["NICK"] + " " + args[0] + " :Erroneous nickname\r\n";
+            send(_fd, msg.c_str(), msg.size(), 0);
+        }
+        else
+            server->update_nick(this, args[0]);
+    }
+    else if (cmd == "PING")
+    {
+        std::string msg = "PONG ";
+        if (!args.empty())
+            msg += args[0] + "\r\n";
+        else
+            msg += "\r\n";
+        send(_fd, msg.c_str(), msg.size(), 0);
     }
     else
     {
-        send(_fd, "command not recognized\n", 23, 0);
+        // send(_fd, "command not recognized\n", 23, 0);
     }
     args.erase(args.begin(), args.end());
     cmd.erase(cmd.begin(), cmd.end());
     // cmd = "";
     // args.erase(args.begin(), args.end());
-}
-
-void Client::link_list(std::map<std::string, int> *ptr)
-{
-    name_list = ptr;
 }
 
 bool Client::get_link() const
@@ -276,4 +322,9 @@ void Client::set_inv_cname(std::string cname)
 std::string Client::get_inv_cname()
 {
     return inv_cname;
+}
+
+void Client::set_nick(std::string new_nick)
+{
+    info["NICK"] = new_nick;
 }
