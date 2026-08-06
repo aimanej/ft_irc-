@@ -180,7 +180,7 @@ int Client::registration()
     }
     else
     {
-        std::cout << " registration failed " << std::endl;
+        // std::cout << " registration failed " << std::endl;
         failed_registration = true;
         return 1;
     }
@@ -206,7 +206,7 @@ bool Client::get_failed_reg() const
 
 void Client::command_hub()
 {
-    std::cout << "hit the hub >> WITH CMD ::  [" << cmd << "]" << std::endl;
+    // std::cout << "hit the hub >> WITH CMD ::  [" << cmd << "]" << std::endl;
     if (cmd == "PRIVMSG")
     {
         if (args.size() >= 1 && args[0][0] == '#')
@@ -233,7 +233,7 @@ void Client::command_hub()
     }
     else if (cmd == "QUIT")
     {
-        std::cout << "INSIDE QUIT FUNCTION " << std::endl;
+        // std::cout << "INSIDE QUIT FUNCTION " << std::endl;
         quit_request = true;
         std::string reason = (!args.empty()) ? args[0] : "Client Quit";
         std::string msg = "ERROR :Closing Link: " + info["NICK"] + " (Quit: " + reason + ")\r\n";

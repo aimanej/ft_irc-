@@ -96,7 +96,7 @@ int Server::read_from_socket(int t)
         return 1;
     }
     buffer[b] = '\0';
-    std::cout << "recieved" << buffer << std::endl;
+    // std::cout << "recieved" << buffer << std::endl;
     clients[t - 1]->add_to_buffer(buffer);
     // clients[t - 1]->link_list(&name_list);
     return 0;
@@ -135,10 +135,10 @@ void Server::process_completed_message(int t)
             else
             {
                 {
-                    std::cout << "connection accepted for " << clients[t - 1]->get_nick() << " socket fd -> " << clients[t - 1]->get_fd() << std::endl;
+                    // std::cout << "connection accepted for " << clients[t - 1]->get_nick() << " socket fd -> " << clients[t - 1]->get_fd() << std::endl;
                     std::string msg = ":irc_server 001 " + clients[t - 1]->get_nick() + " :Welcome to the IRC server Network\r\n";
                     send(clients[t - 1]->get_fd(), msg.c_str(), msg.size(), 0);
-                    std::cout << "nickname for new user inside the map >> " << clients[t - 1]->get_nick() << std::endl;
+                    // std::cout << "nickname for new user inside the map >> " << clients[t - 1]->get_nick() << std::endl;
                     name_list.insert({clients[t - 1]->get_nick(), clients[t - 1]->get_fd()});
                     clients[t - 1]->set_added();
                 }
@@ -193,13 +193,13 @@ void Server::send_message(std::string sender, std::string recipient, std::vector
         send(name_list[sender], msg.c_str(), msg.size(), 0);
         return;
     }
-    std::cout << "inside pvt msgfunction" << std::endl;
+    // std::cout << "inside pvt msgfunction" << std::endl;
     std::map<std::string, int>::iterator it = name_list.find(recipient);
 
-    std::cout << "looking for : " << recipient << std::endl;
+    // std::cout << "looking for : " << recipient << std::endl;
     if (it != name_list.end())
     {
-        std::cout << "sending to : " << it->first << std::endl;
+        // std::cout << "sending to : " << it->first << std::endl;
 
         std::string msg = ":" + sender + " PRIVMSG " + recipient + " :";
         for (int t = 1; t < msgs.size(); t++)
@@ -225,14 +225,14 @@ bool Server::free_nickname(std::string nick)
 
 void Server::create_channel(std::string name, Client *client)
 {
-    std::cout << " name enteredd ::::::  " << name << std::endl;
+    // std::cout << " name enteredd ::::::  " << name << std::endl;
     if (name[0] != '#')
     {
         send(client->get_fd(), "use # before the name of a channel you would like to join\r\n", 59, 0);
         return;
     }
     std::string cname = name.substr(1, name.size());
-    std::cout << "name of wanted to be created  --> " << cname << std::endl;
+    // std::cout << "name of wanted to be created  --> " << cname << std::endl;
 
     if (open_channels.find(cname) == open_channels.end())
     {
